@@ -889,10 +889,12 @@ const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 Vue.createApp({
   data() {
     return {
-      appVersion: '1.5',
+      appVersion: '1.6',
       authenticated: false,
       currentUser: null,
       token: null,
+      isAdmin: false,
+      userRole: 'team',
 
       loginForm: { username: '', password: '' },
       loginLoading: false,
@@ -1054,6 +1056,8 @@ Vue.createApp({
         if (!data || !data.success) { this.loginError = data?.error || 'Credenciales incorrectas'; return; }
         this.token = data.token;
         this.currentUser = data.user;
+        this.isAdmin = data.user?.is_admin || false;
+        this.userRole = data.role || (this.isAdmin ? 'admin' : 'team');
         localStorage.setItem(CN_SESSION_KEY, JSON.stringify({ token: data.token, user: data.user }));
         this.authenticated = true;
         await this.loadAll();
@@ -1066,16 +1070,40 @@ Vue.createApp({
       this.authenticated = false; this.token = null; this.currentUser = null;
     },
     async restoreSession() {
+      // Check for cn_token in URL (SSO from Wild Apps panel)
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlToken = urlParams.get('cn_token');
+      if (urlToken) {
+        urlParams.delete('cn_token');
+        const cleanUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+        window.history.replaceState({}, '', cleanUrl);
+        const ok = await this.validateAndSetToken(urlToken);
+        if (ok) return;
+      }
+      // Fall back to localStorage
       const raw = localStorage.getItem(CN_SESSION_KEY);
       if (!raw) return;
       try {
         const { token, user } = JSON.parse(raw);
+        const ok = await this.validateAndSetToken(token, user);
+        if (!ok) localStorage.removeItem(CN_SESSION_KEY);
+      } catch(e) { localStorage.removeItem(CN_SESSION_KEY); }
+    },
+    async validateAndSetToken(token, fallbackUser) {
+      try {
         const { data } = await db.rpc('cn_validate_token', { p_token: token });
         if (data?.success) {
-          this.token = token; this.currentUser = data.user || user; this.authenticated = true;
+          this.token = token;
+          this.currentUser = data.user || fallbackUser;
+          this.isAdmin = this.currentUser?.is_admin || false;
+          this.userRole = data.role || (this.isAdmin ? 'admin' : 'team');
+          this.authenticated = true;
+          localStorage.setItem(CN_SESSION_KEY, JSON.stringify({ token, user: this.currentUser }));
           await this.loadAll();
-        } else { localStorage.removeItem(CN_SESSION_KEY); }
-      } catch(e) { localStorage.removeItem(CN_SESSION_KEY); }
+          return true;
+        }
+        return false;
+      } catch(e) { return false; }
     },
 
     // LOAD ALL
