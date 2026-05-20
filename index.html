@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Productos y Salas — Wild Labs</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
+  body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+  .fade-enter-active, .fade-leave-active { transition: opacity 0.15s; }
+  .fade-enter-from, .fade-leave-to { opacity: 0; }
+  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; }
+  /* Badges */
+  .badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; font-size: 0.73rem; font-weight: 600; }
+  .badge-hiperlider { background: #ede9fe; color: #5b21b6; }
+  .badge-lider      { background: #d1fae5; color: #065f46; }
+  .badge-express    { background: #ffedd5; color: #9a3412; }
+  .badge-norte      { background: #dbeafe; color: #1e40af; }
+  .badge-rm         { background: #d1fae5; color: #065f46; }
+  .badge-sur        { background: #fef3c7; color: #92400e; }
+  .badge-outlet     { background: #fce7f3; color: #9d174d; }
+  /* Inputs */
+  .input-field { width: 100%; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; transition: all 0.2s; font-size: 0.875rem; background: #fff; color: #111827; }
+  .input-field:focus { border-color: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,0.15); }
+  select.input-field { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 32px; }
+  /* Buttons */
+  .btn-primary { padding: 9px 20px; background: #16a34a; color: white; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.15s; border: none; font-size: 0.875rem; }
+  .btn-primary:hover { background: #15803d; box-shadow: 0 2px 8px rgba(22,163,74,0.3); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+  .btn-secondary { padding: 9px 20px; background: #f3f4f6; color: #374151; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.15s; border: 1px solid #e5e7eb; font-size: 0.875rem; }
+  .btn-secondary:hover { background: #e5e7eb; }
+  .btn-blue { padding: 9px 20px; background: #2563eb; color: white; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.15s; border: none; font-size: 0.875rem; }
+  .btn-blue:hover { background: #1d4ed8; }
+  /* Sidebar */
+  .sidebar { position: fixed; left: 0; top: 0; width: 260px; height: 100vh; background: white; border-right: 1px solid #f3f4f6; z-index: 40; display: flex; flex-direction: column; }
+  .sidebar-nav { flex: 1; overflow-y: auto; padding: 12px; }
+  .sidebar-footer { padding: 16px; border-top: 1px solid #f3f4f6; background: #fafafa; flex-shrink: 0; }
+  @media (max-width: 1024px) { .sidebar { display: none; } }
+  /* Nav items */
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; cursor: pointer; transition: all 0.15s; font-size: 0.9rem; color: #4b5563; width: 100%; text-align: left; background: none; border: none; }
+  .nav-item:hover { background: #f0fdf4; color: #15803d; }
+  .nav-item.active { background: #dcfce7; color: #15803d; font-weight: 600; }
+  /* Mobile bottom nav */
+  .mobile-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 2px; font-size: 0.65rem; font-weight: 600; cursor: pointer; transition: all 0.15s; color: #9ca3af; gap: 2px; min-height: 56px; background: none; border: none; }
+  .mobile-nav-item.active { color: #16a34a; }
+  .mobile-nav-item .nav-icon { font-size: 1.1rem; }
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); backdrop-filter: blur(4px); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .modal-content { background: white; border-radius: 20px; box-shadow: 0 24px 64px rgba(0,0,0,0.15); padding: 28px; max-width: 560px; width: 100%; max-height: 90vh; overflow-y: auto; }
+  /* Toast */
+  .toast { position: fixed; top: 20px; right: 20px; z-index: 100; padding: 14px 22px; border-radius: 12px; color: white; font-weight: 600; font-size: 0.875rem; box-shadow: 0 8px 24px rgba(0,0,0,0.15); animation: slideIn 0.3s ease-out; max-width: 380px; }
+  .toast-ok  { background: #16a34a; }
+  .toast-err { background: #dc2626; }
+  @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  /* Sort */
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { color: #15803d; }
+  /* Progress */
+  .progress-track { height: 6px; background: #e5e7eb; border-radius: 9999px; overflow: hidden; flex: 1; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #4ade80, #16a34a); border-radius: 9999px; transition: width 0.3s; }
+  /* Version chip */
+  .version-chip { position: fixed; bottom: 16px; right: 16px; z-index: 40; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 9999px; padding: 4px 12px; font-size: 0.7rem; color: #9ca3af; }
+</style>
+</head>
+<body class="bg-gray-50">
+<div id="app">
+
+<!-- LOGIN -->
+<div v-if="!authenticated" class="min-h-screen flex items-center justify-center" style="background: linear-gradient(135deg,#f0fdf4,#f1f5f9); padding: 16px;">
+  <div style="background: white; border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); padding: 36px 32px; width: 100%; max-width: 400px;">
+    <div class="text-center mb-8">
+      <div class="text-4xl mb-3">🏪</div>
+      <h1 class="text-xl font-bold text-gray-900">Productos y Salas</h1>
+      <p class="text-sm text-gray-400 mt-1">Wild Labs — Casa Nativa</p>
+    </div>
+    <div class="space-y-4">
+      <input v-model="loginForm.username" @keyup.enter="doLogin" placeholder="Usuario" autocomplete="username" class="input-field" />
+      <input v-model="loginForm.password" @keyup.enter="doLogin" type="password" placeholder="Contraseña" autocomplete="current-password" class="input-field" />
+      <button @click="doLogin" :disabled="loginLoading" class="btn-primary w-full" style="min-height:44px;">
+        {{ loginLoading ? 'Ingresando…' : 'Ingresar' }}
+      </button>
+      <p v-if="loginError" class="text-red-500 text-sm text-center">{{ loginError }}</p>
+    </div>
+  </div>
+</div>
+
+<!-- APP PRINCIPAL -->
+<div v-else>
+
+  <!-- SIDEBAR desktop -->
+  <div class="sidebar">
+    <div style="padding: 20px 16px 14px; border-bottom: 1px solid #f3f4f6;">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">🏪</span>
+        <div>
+          <h1 class="font-bold text-gray-900 text-sm leading-none">Productos y Salas</h1>
+          <p class="text-xs text-gray-400 leading-none mt-1">Casa Nativa · Walmart Chile</p>
+        </div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id"
+        :class="['nav-item', activeTab===tab.id ? 'active' : '']">
+        <span>{{ tab.icon }}</span>
+        <span>{{ tab.label }}</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <p class="text-xs font-medium text-gray-700">{{ currentUser?.name }}</p>
+      <button @click="doLogout" class="text-xs text-gray-400 hover:text-red-500 transition-colors mt-1">Cerrar sesión</button>
+    </div>
+  </div>
+
+  <!-- MAIN AREA -->
+  <div class="lg:ml-[260px] min-h-screen bg-gray-50 flex flex-col">
+
+    <!-- Mobile header -->
+    <div class="lg:hidden bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between sticky top-0 z-30">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">🏪</span>
+        <span class="font-bold text-gray-900 text-sm">Productos y Salas</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-xs text-gray-500">{{ currentUser?.name }}</span>
+        <button @click="doLogout" class="text-xs text-gray-400 hover:text-red-500">Salir</button>
+      </div>
+    </div>
+
+    <!-- Page title bar (desktop) -->
+    <div class="hidden lg:flex items-center justify-between px-6 pt-6 pb-2">
+      <div>
+        <h2 class="text-lg font-bold text-gray-900">{{ tabs.find(t=>t.id===activeTab)?.label }}</h2>
+      </div>
+    </div>
+
+    <!-- CONTENT -->
+    <main class="flex-1 px-4 md:px-6 pb-24 lg:pb-8 pt-2">
+
+      <!-- ===================== TAB: SALAS ===================== -->
+      <div v-if="activeTab === 'salas'">
+        <div class="card p-4 mb-4">
+          <div class="flex flex-wrap gap-3">
+            <input v-model="salasFilter.search" @input="salasPage=1" placeholder="🔍 Buscar por nombre o N°"
+              class="input-field" style="width:200px;" />
+            <select v-model="salasFilter.tipo" @change="salasPage=1" class="input-field" style="width:160px;">
+              <option value="">Todos los tipos</option>
+              <option value="hiperlider">Hiper Lider</option>
+              <option value="lider">Lider</option>
+              <option value="express">Express</option>
+            </select>
+            <select v-model="salasFilter.zona" @change="salasPage=1" class="input-field" style="width:150px;">
+              <option value="">Todas las zonas</option>
+              <option v-for="z in zonasList" :key="z" :value="z">{{ z }}</option>
+            </select>
+            <select v-model="salasFilter.activa" @change="salasPage=1" class="input-field" style="width:130px;">
+              <option value="">Todas</option>
+              <option value="true">Solo activas</option>
+              <option value="false">Solo inactivas</option>
+            </select>
+            <div class="flex-1"></div>
+            <button @click="exportSalasExcel" class="btn-secondary text-sm">↓ Excel</button>
+            <button @click="openSalaForm(null)" class="btn-primary text-sm">+ Nueva Sala</button>
+          </div>
+          <p class="text-xs text-gray-400 mt-3">{{ salasFiltradas.length }} salas · {{ salasActivas.length }} activas</p>
+        </div>
+
+        <div class="card overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50 border-b border-gray-100 text-gray-500 text-xs uppercase">
+                <tr>
+                  <th class="sortable px-4 py-3 text-left" @click="sortSalas('store_nbr')">N° {{ sortIcon('salas','store_nbr') }}</th>
+                  <th class="sortable px-4 py-3 text-left" @click="sortSalas('nombre')">Nombre {{ sortIcon('salas','nombre') }}</th>
+                  <th class="sortable px-4 py-3 text-left" @click="sortSalas('tipo')">Tipo {{ sortIcon('salas','tipo') }}</th>
+                  <th class="sortable px-4 py-3 text-left" @click="sortSalas('zona')">Zona {{ sortIcon('salas','zona') }}</th>
+                  <th class="px-4 py-3 text-left">Región</th>
+                  <th class="px-4 py-3 text-left">Comuna</th>
+                  <th class="px-4 py-3 text-left">Dirección</th>
+                  <th class="sortable px-4 py-3 text-center" @click="sortSalas('activa')">Estado {{ sortIcon('salas','activa') }}</th>
+                  <th class="px-4 py-3 text-center">SKUs</th>
+                  <th class="px-4 py-3 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr v-if="salasPageData.length === 0">
+                  <td colspan="10" class="px-4 py-10 text-center text-gray-400 text-sm">No hay resultados</td>
+                </tr>
+                <tr v-for="s in salasPageData" :key="s.id" class="hover:bg-gray-50 transition-colors">
+                  <td class="px-4 py-3 font-mono text-green-700 font-bold text-xs">{{ s.store_nbr }}</td>
+                  <td class="px-4 py-3 font-medium text-gray-900 text-sm">{{ s.nombre }}</td>
+                  <td class="px-4 py-3">
+                    <span v-if="s.tipo" :class="['badge', 'badge-'+s.tipo]">{{ tipoLabel(s.tipo) }}</span>
+                    <span v-else class="text-gray-300 text-xs">—</span>
+                  </td>
+                  <td class="px-4 py-3">
+                    <span v-if="s.zona" :class="['badge', 'badge-'+s.zona.toLowerCase()]">{{ s.zona }}</span>
+                    <span v-else class="text-gray-300 text-xs">—</span>
+                  </td>
+                  <td class="px-4 py-3 text-gray-500 text-xs">{{ s.region || '—' }}</td>
+                  <td class="px-4 py-3 text-gray-500 text-xs">{{ s.comuna || '—' }}</td>
+                  <td class="px-4 py-3 text-gray-400 text-xs max-w-xs truncate">{{ s.direccion || '—' }}</td>
+                  <td class="px-4 py-3 text-center">
+                    <span :class="s.activa ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'"
+                      class="badge text-xs">{{ s.activa ? 'Activa' : 'Inactiva' }}</span>
+                  </td>
+                  <td class="px-4 py-3 text-center text-xs">
+                    <span class="font-semibold text-gray-700">{{ salaSkuCount(s.id) }}</span>
+                    <span class="text-gray-400">/{{ productos.filter(p=>p.activo).length }}</span>
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    <div class="flex gap-3 justify-end">
+                      <button @click="openSalaForm(s)" class="text-xs text-green-700 hover:text-green-800 font-semibold">Editar</button>
+                      <button @click="toggleSala(s)" :class="s.activa ? 'text-gray-400 hover:text-red-500' : 'text-gray-400 hover:text-green-600'" class="text-xs">
+                        {{ s.activa ? 'Desactivar' : 'Activar' }}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="px-4 py-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+            <span>Página {{ salasPage }} de {{ salasMaxPage }}</span>
+            <div class="flex gap-2">
+              <button @click="salasPage--" :disabled="salasPage<=1" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg disabled:opacity-40 transition-colors">← Ant</button>
+              <button @click="salasPage++" :disabled="salasPage>=salasMaxPage" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg disabled:opacity-40 transition-colors">Sig →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== TAB: PRODUCTOS ===================== -->
+      <div v-if="activeTab === 'productos'">
+        <div class="card p-4 mb-4">
+          <div class="flex flex-wrap gap-3">
+            <input v-model="prodFilter.search" @input="prodPage=1" placeholder="🔍 Buscar por SKU, descripción, UPC"
+              class="input-field" style="width:260px;" />
+            <select v-model="prodFilter.categoria" @change="prodPage=1" class="input-field" style="width:180px;">
+              <option value="">Todas las categorías</option>
+              <option v-for="c in categoriasUnicas" :key="c" :value="c">{{ c }}</option>
+            </select>
+            <select v-model="prodFilter.activo" @change="prodPage=1" class="input-field" style="width:130px;">
+              <option value="">Todos</option>
+              <option value="true">Solo activos</option>
+              <option value="false">Solo inactivos</option>
+            </select>
+            <div class="flex-1"></div>
+            <button @click="openProductoForm(null)" class="btn-primary text-sm">+ Nuevo Producto</button>
+          </div>
+          <p class="text-xs text-gray-400 mt-3">{{ productosFiltrados.length }} productos</p>
+        </div>
+        <div class="card overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50 border-b border-gray-100 text-gray-500 text-xs uppercase">
+                <tr>
+                  <th class="sortable px-4 py-3 text-left" @click="sortProd('prime_item_nbr')">Item # {{ sortIcon('prod','prime_item_nbr') }}</th>
+                  <th class="sortable px-4 py-3 text-left" @click="sortProd('sku_cn')">SKU CN {{ sortIcon('prod','sku_cn') }}</th>
+                  <th class="sortable px-4 py-3 text-left" @click="sortProd('descripcion')">Descripción {{ sortIcon('prod','descripcion') }}</th>
+                  <th class="sortable px-4 py-3 text-left" @click="sortProd('categoria')">Categoría {{ sortIcon('prod','categoria') }}</th>
+                  <th class="px-4 py-3 text-left">Subgrupo</th>
+                  <th class="px-4 py-3 text-center">VNPK</th>
+                  <th class="px-4 py-3 text-left">UPC</th>
+                  <th class="px-4 py-3 text-center">Salas</th>
+                  <th class="px-4 py-3 text-center">Estado</th>
+                  <th class="px-4 py-3 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr v-if="productosPageData.length===0">
+                  <td colspan="10" class="px-4 py-10 text-center text-gray-400 text-sm">No hay resultados</td>
+                </tr>
+                <tr v-for="p in productosPageData" :key="p.id" class="hover:bg-gray-50 transition-colors">
+                  <td class="px-4 py-3 font-mono text-xs text-gray-500">{{ p.prime_item_nbr }}</td>
+                  <td class="px-4 py-3 font-mono text-green-700 font-bold text-xs">{{ p.sku_cn || '—' }}</td>
+                  <td class="px-4 py-3 font-medium text-gray-900 text-xs">{{ p.descripcion }}</td>
+                  <td class="px-4 py-3 text-xs text-gray-600">{{ p.categoria || '—' }}</td>
+                  <td class="px-4 py-3 text-xs text-gray-400">{{ p.subgrupo || '—' }}</td>
+                  <td class="px-4 py-3 text-center text-xs text-gray-600">{{ p.vnpk_qty || '—' }}</td>
+                  <td class="px-4 py-3 font-mono text-xs text-gray-400">{{ p.upc || '—' }}</td>
+                  <td class="px-4 py-3 text-center text-xs">
+                    <span class="font-semibold text-gray-700">{{ productoSalaCount(p.id) }}</span>
+                    <span class="text-gray-400">/{{ salasActivas.length }}</span>
+                  </td>
+                  <td class="px-4 py-3 text-center">
+                    <span :class="p.activo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'" class="badge">
+                      {{ p.activo ? 'Activo' : 'Inactivo' }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    <button @click="openProductoForm(p)" class="text-xs text-green-700 hover:text-green-800 font-semibold">Editar</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="px-4 py-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+            <span>Página {{ prodPage }} de {{ prodMaxPage }}</span>
+            <div class="flex gap-2">
+              <button @click="prodPage--" :disabled="prodPage<=1" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg disabled:opacity-40 transition-colors">← Ant</button>
+              <button @click="prodPage++" :disabled="prodPage>=prodMaxPage" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg disabled:opacity-40 transition-colors">Sig →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== TAB: MATRIZ ===================== -->
+      <div v-if="activeTab === 'matriz'">
+        <div class="flex gap-2 mb-4">
+          <button @click="matrizVista='sala'"
+            :class="['text-sm font-semibold px-4 py-2 rounded-lg transition-colors border',
+              matrizVista==='sala' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50']">
+            Por Sala
+          </button>
+          <button @click="matrizVista='producto'"
+            :class="['text-sm font-semibold px-4 py-2 rounded-lg transition-colors border',
+              matrizVista==='producto' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50']">
+            Por Producto
+          </button>
+          <button @click="matrizVista='grid'"
+            :class="['text-sm font-semibold px-4 py-2 rounded-lg transition-colors border',
+              matrizVista==='grid' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50']">
+            Grid Completo
+          </button>
+          <div class="flex-1"></div>
+          <button @click="exportMatrizExcel" class="btn-secondary text-sm">↓ Excel</button>
+        </div>
+
+        <!-- Vista por Sala -->
+        <div v-if="matrizVista==='sala'">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="card p-4">
+              <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-2">Seleccionar Sala</p>
+              <input v-model="matrizSalaSearch" placeholder="Buscar sala…" class="input-field mb-3" />
+              <div class="space-y-1 max-h-96 overflow-y-auto">
+                <button v-for="s in salasActivasFiltradas" :key="s.id"
+                  @click="matrizSalaSeleccionada=s; matrizProductosSeleccionados=getProductosBySala(s.id)"
+                  :class="['w-full text-left px-3 py-2 rounded-lg text-xs transition-colors flex items-center justify-between',
+                    matrizSalaSeleccionada?.id===s.id ? 'bg-green-50 text-green-700 border border-green-200 font-semibold' : 'text-gray-600 hover:bg-gray-50 border border-transparent']">
+                  <span><strong>{{ s.store_nbr }}</strong> {{ s.nombre }}</span>
+                  <span class="text-gray-400 ml-2">{{ salaSkuCount(s.id) }}</span>
+                </button>
+              </div>
+            </div>
+            <div class="md:col-span-2 card p-4">
+              <div v-if="!matrizSalaSeleccionada" class="h-48 flex items-center justify-center text-gray-400 text-sm">
+                Selecciona una sala para ver/editar su matriz de productos
+              </div>
+              <div v-else>
+                <div class="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 class="font-semibold text-gray-900 text-sm">#{{ matrizSalaSeleccionada.store_nbr }} {{ matrizSalaSeleccionada.nombre }}</h3>
+                    <p class="text-xs text-gray-400 mt-0.5">{{ matrizProductosSeleccionados.length }} de {{ productos.filter(p=>p.activo).length }} SKUs asignados</p>
+                  </div>
+                  <button @click="guardarMatrizSala" :disabled="matrizSaving" class="btn-primary text-sm">
+                    {{ matrizSaving ? 'Guardando…' : 'Guardar' }}
+                  </button>
+                </div>
+                <div class="grid grid-cols-1 gap-1">
+                  <label v-for="p in productos.filter(p=>p.activo)" :key="p.id"
+                    class="flex items-center gap-3 p-3 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
+                    <input type="checkbox" :value="p.id" v-model="matrizProductosSeleccionados"
+                      class="w-4 h-4 cursor-pointer" style="accent-color: #16a34a;" />
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span class="font-mono text-xs text-green-700 font-bold">{{ p.sku_cn }}</span>
+                        <span class="text-xs text-gray-400">{{ p.prime_item_nbr }}</span>
+                      </div>
+                      <p class="text-xs text-gray-500 truncate">{{ p.descripcion }}</p>
+                    </div>
+                    <span class="text-xs text-gray-400">{{ p.categoria }}</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vista por Producto -->
+        <div v-if="matrizVista==='producto'">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="card p-4">
+              <p class="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-2">Seleccionar Producto</p>
+              <div class="space-y-1">
+                <button v-for="p in productos.filter(p=>p.activo)" :key="p.id"
+                  @click="matrizProdSeleccionado=p"
+                  :class="['w-full text-left px-3 py-2 rounded-lg transition-colors border',
+                    matrizProdSeleccionado?.id===p.id ? 'bg-green-50 text-green-700 border-green-200 font-semibold' : 'text-gray-600 hover:bg-gray-50 border-transparent']">
+                  <span class="font-mono text-xs font-bold">{{ p.sku_cn }}</span>
+                  <p class="text-xs text-gray-400 truncate mt-0.5">{{ p.descripcion }}</p>
+                  <span class="text-xs text-gray-400">{{ productoSalaCount(p.id) }} salas</span>
+                </button>
+              </div>
+            </div>
+            <div class="md:col-span-2 card p-4">
+              <div v-if="!matrizProdSeleccionado" class="h-48 flex items-center justify-center text-gray-400 text-sm">
+                Selecciona un producto para ver en qué salas está
+              </div>
+              <div v-else>
+                <h3 class="font-semibold text-gray-900 mb-1 text-sm">{{ matrizProdSeleccionado.sku_cn }} — {{ matrizProdSeleccionado.descripcion }}</h3>
+                <p class="text-xs text-gray-400 mb-4">En {{ productoSalaCount(matrizProdSeleccionado.id) }} de {{ salasActivas.length }} salas activas</p>
+                <div class="grid grid-cols-2 gap-2">
+                  <div v-for="s in salasActivas.slice().sort((a,b)=>a.store_nbr-b.store_nbr)" :key="s.id"
+                    :class="['p-2 rounded-lg text-xs flex items-center gap-2 border',
+                      isEnMatriz(s.id, matrizProdSeleccionado.id) ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-100']">
+                    <span :class="isEnMatriz(s.id, matrizProdSeleccionado.id) ? 'text-green-600 font-bold' : 'text-gray-300'">
+                      {{ isEnMatriz(s.id, matrizProdSeleccionado.id) ? '✓' : '○' }}
+                    </span>
+                    <span :class="isEnMatriz(s.id, matrizProdSeleccionado.id) ? 'text-gray-900' : 'text-gray-400'">
+                      <strong>{{ s.store_nbr }}</strong> {{ s.nombre }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vista Grid Completo -->
+        <div v-if="matrizVista==='grid'" class="card overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="text-xs border-collapse">
+              <thead class="bg-gray-50 border-b border-gray-100 sticky top-0 z-10">
+                <tr>
+                  <th class="px-3 py-2 text-left text-gray-500 font-semibold border-r border-gray-100 min-w-40 sticky left-0 bg-gray-50 z-20">Sala</th>
+                  <th v-for="p in productos.filter(p=>p.activo)" :key="p.id"
+                    class="px-2 py-2 text-center text-gray-500 font-semibold border-r border-gray-100 min-w-20">
+                    <div class="font-mono text-green-700 font-bold">{{ p.sku_cn }}</div>
+                    <div class="text-gray-400 text-xs leading-none">{{ p.prime_item_nbr }}</div>
+                  </th>
+                  <th class="px-3 py-2 text-center text-gray-500 border-r border-gray-100">Total</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr v-for="s in salasActivas.slice().sort((a,b)=>a.store_nbr-b.store_nbr)" :key="s.id"
+                  class="hover:bg-gray-50 transition-colors">
+                  <td class="px-3 py-2 border-r border-gray-100 sticky left-0 bg-white z-10">
+                    <span class="font-mono text-green-700 font-bold">{{ s.store_nbr }}</span>
+                    <span class="text-gray-600 ml-1">{{ s.nombre }}</span>
+                    <span v-if="s.zona" class="ml-1 text-gray-400">· {{ s.zona }}</span>
+                  </td>
+                  <td v-for="p in productos.filter(p=>p.activo)" :key="p.id"
+                    class="px-2 py-2 text-center border-r border-gray-100">
+                    <span :class="isEnMatriz(s.id, p.id) ? 'text-green-600 font-bold text-base' : 'text-gray-200'">
+                      {{ isEnMatriz(s.id, p.id) ? '✓' : '·' }}
+                    </span>
+                  </td>
+                  <td class="px-3 py-2 text-center font-semibold" :class="salaSkuCount(s.id)===productos.filter(p=>p.activo).length ? 'text-green-700' : 'text-gray-700'">
+                    {{ salaSkuCount(s.id) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== TAB: RANKING ===================== -->
+      <div v-if="activeTab === 'ranking'">
+        <div class="card p-4 mb-4">
+          <div class="flex flex-wrap gap-3">
+            <select v-model="rankingFilter.periodo" @change="rankingPage=1" class="input-field" style="width:180px;">
+              <option value="">Todos los períodos</option>
+              <option v-for="p in periodosUnicos" :key="p" :value="p">{{ p }}</option>
+            </select>
+            <input v-model="rankingFilter.search" @input="rankingPage=1" placeholder="🔍 Buscar sala, SKU…"
+              class="input-field" style="width:200px;" />
+            <div class="flex-1"></div>
+            <button @click="showImportRanking=!showImportRanking" class="btn-blue text-sm">↑ Importar Ranking</button>
+            <button @click="exportRankingExcel" class="btn-secondary text-sm">↓ Excel</button>
+          </div>
+
+          <!-- Import panel -->
+          <div v-if="showImportRanking" class="mt-4 border-t border-gray-100 pt-4">
+            <h3 class="text-sm font-semibold text-gray-900 mb-3">Importar Ranking desde Excel</h3>
+
+            <!-- Step 1: meta + file -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+              <div>
+                <label class="text-xs text-gray-500 font-medium block mb-1">Período (ej: 2024-Q4)</label>
+                <input v-model="importRanking.periodo" placeholder="2024-Q4" class="input-field" />
+              </div>
+              <div>
+                <label class="text-xs text-gray-500 font-medium block mb-1">Fuente</label>
+                <input v-model="importRanking.fuente" placeholder="Empresa proveedora" class="input-field" />
+              </div>
+              <div>
+                <label class="text-xs text-gray-500 font-medium block mb-1">Archivo Excel</label>
+                <input type="file" ref="rankingFile" accept=".xlsx,.xls,.csv"
+                  @change="onRankingFileSelected"
+                  class="input-field" style="padding: 6px 12px; font-size: 0.8rem;" />
+              </div>
+            </div>
+
+            <!-- Step 2: column mapper (shown when file is loaded) -->
+            <div v-if="importRanking.cols.length > 0" class="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4">
+              <p class="text-xs font-semibold text-gray-700 mb-3">Mapeo de columnas — asigna cada campo a la columna de tu archivo</p>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label class="text-xs text-gray-500 font-medium block mb-1">Posición / Ranking <span class="text-red-400">*</span></label>
+                  <select v-model="importRanking.mapping.ranking_pos" class="input-field">
+                    <option value="">— No mapear —</option>
+                    <option v-for="c in importRanking.cols" :key="c" :value="c">{{ c }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500 font-medium block mb-1">N° Sala (store_nbr) <span class="text-red-400">*</span></label>
+                  <div class="flex gap-2">
+                    <select v-model="importRanking.mapping.store_nbr" class="input-field">
+                      <option value="">— No mapear —</option>
+                      <option v-for="c in importRanking.cols" :key="c" :value="c">{{ c }}</option>
+                    </select>
+                  </div>
+                  <label v-if="importRanking.mapping.store_nbr" class="flex items-center gap-2 mt-1.5 cursor-pointer">
+                    <input type="checkbox" v-model="importRanking.mapping.store_nbr_extract" style="accent-color:#16a34a;" />
+                    <span class="text-xs text-gray-500">Extraer número del texto (ej: "057 Hiper Lider…" → 57)</span>
+                  </label>
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500 font-medium block mb-1">SKU CN <span class="text-gray-300">(opcional)</span></label>
+                  <select v-model="importRanking.mapping.sku_cn" class="input-field">
+                    <option value="">— No mapear —</option>
+                    <option v-for="c in importRanking.cols" :key="c" :value="c">{{ c }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500 font-medium block mb-1">Descripción producto <span class="text-gray-300">(opcional)</span></label>
+                  <select v-model="importRanking.mapping.descripcion_producto" class="input-field">
+                    <option value="">— No mapear —</option>
+                    <option v-for="c in importRanking.cols" :key="c" :value="c">{{ c }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500 font-medium block mb-1">Ventas unidades <span class="text-gray-300">(opcional)</span></label>
+                  <select v-model="importRanking.mapping.ventas_unidades" class="input-field">
+                    <option value="">— No mapear —</option>
+                    <option v-for="c in importRanking.cols" :key="c" :value="c">{{ c }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-xs text-gray-500 font-medium block mb-1">Ventas monto <span class="text-gray-300">(opcional)</span></label>
+                  <select v-model="importRanking.mapping.ventas_monto" class="input-field">
+                    <option value="">— No mapear —</option>
+                    <option v-for="c in importRanking.cols" :key="c" :value="c">{{ c }}</option>
+                  </select>
+                </div>
+              </div>
+              <p class="text-xs text-gray-400 mt-3">Las columnas no mapeadas se guardan igual en el campo "extra" y quedan disponibles para filtros futuros.</p>
+            </div>
+
+            <!-- Step 3: preview -->
+            <div v-if="importRanking.preview.length > 0" class="mb-4">
+              <p class="text-xs text-gray-500 mb-2">Vista previa del archivo (primeras 5 filas):</p>
+              <div class="overflow-x-auto">
+                <table class="text-xs card overflow-hidden">
+                  <thead class="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      <th v-for="col in importRanking.cols" :key="col" class="px-3 py-2 text-left text-gray-500">{{ col }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(row, i) in importRanking.preview" :key="i" class="border-t border-gray-100">
+                      <td v-for="col in importRanking.cols" :key="col" class="px-3 py-1.5 text-gray-600">{{ fmtPreviewCell(col, row[col]) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <button v-if="importRanking.rows.length > 0" @click="doImportRanking" :disabled="importRanking.loading" class="btn-primary text-sm">
+              {{ importRanking.loading ? 'Importando…' : 'Importar ' + importRanking.rows.length + ' filas' }}
+            </button>
+          </div>
+        </div>
+
+        <div v-if="ranking.length === 0" class="card p-12 text-center">
+          <div class="text-4xl mb-3">📊</div>
+          <p class="text-gray-500 text-sm">No hay datos de ranking cargados.</p>
+          <p class="text-gray-400 text-xs mt-1">Usa el botón "Importar Ranking" para cargar datos desde Excel.</p>
+        </div>
+        <div v-else class="card overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50 border-b border-gray-100 text-gray-500 text-xs uppercase">
+                <tr>
+                  <th class="sortable px-4 py-3 text-center" @click="sortRanking('ranking_pos')">Pos {{ sortIcon('ranking','ranking_pos') }}</th>
+                  <th class="sortable px-4 py-3 text-left" @click="sortRanking('store_nbr')">Sala {{ sortIcon('ranking','store_nbr') }}</th>
+                  <th class="sortable px-4 py-3 text-right" @click="sortRanking('peso')">% Peso {{ sortIcon('ranking','peso') }}</th>
+                  <th class="sortable px-4 py-3 text-left" @click="sortRanking('sku_cn')">SKU CN {{ sortIcon('ranking','sku_cn') }}</th>
+                  <th class="px-4 py-3 text-left">Descripción</th>
+                  <th class="sortable px-4 py-3 text-right" @click="sortRanking('ventas_unidades')">Unidades {{ sortIcon('ranking','ventas_unidades') }}</th>
+                  <th class="sortable px-4 py-3 text-right" @click="sortRanking('ventas_monto')">Monto {{ sortIcon('ranking','ventas_monto') }}</th>
+                  <th class="px-4 py-3 text-center">Período</th>
+                  <th class="px-4 py-3 text-center">Fuente</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr v-for="r in rankingPageData" :key="r.id" class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-center">
+                    <span :class="r.ranking_pos<=3 ? 'text-amber-600 font-bold' : 'text-gray-500'" class="text-sm">
+                      {{ r.ranking_pos ? '#'+r.ranking_pos : '—' }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3">
+                    <div class="flex items-center gap-2">
+                      <span class="font-mono text-green-700 font-bold text-xs">{{ r.store_nbr }}</span>
+                      <span class="text-gray-700 text-xs font-medium">{{ salaNameByNbr(r.store_nbr) }}</span>
+                      <span v-if="salaByNbr(r.store_nbr)?.tipo" :class="['badge', 'badge-'+salaByNbr(r.store_nbr).tipo]">{{ tipoLabel(salaByNbr(r.store_nbr).tipo) }}</span>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3 text-right text-xs font-semibold text-indigo-700">{{ fmtPeso(r.extra) }}</td>
+                  <td class="px-4 py-3 font-mono text-xs text-green-700 font-bold">{{ r.sku_cn || '—' }}</td>
+                  <td class="px-4 py-3 text-xs text-gray-600">{{ r.descripcion_producto || '—' }}</td>
+                  <td class="px-4 py-3 text-right text-xs text-gray-700">{{ fmtNum(r.ventas_unidades) }}</td>
+                  <td class="px-4 py-3 text-right text-xs text-gray-700">{{ fmtMonto(r.ventas_monto) }}</td>
+                  <td class="px-4 py-3 text-center text-xs text-gray-500">{{ r.periodo }}</td>
+                  <td class="px-4 py-3 text-center text-xs text-gray-400">{{ r.fuente }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="px-4 py-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+            <span>{{ rankingFiltrado.length }} registros · Página {{ rankingPage }} de {{ rankingMaxPage }}</span>
+            <div class="flex gap-2">
+              <button @click="rankingPage--" :disabled="rankingPage<=1" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg disabled:opacity-40">← Ant</button>
+              <button @click="rankingPage++" :disabled="rankingPage>=rankingMaxPage" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg disabled:opacity-40">Sig →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================== TAB: COBERTURA ===================== -->
+      <div v-if="activeTab === 'cobertura'">
+        <div v-if="statsLoading" class="text-center py-12 text-gray-400">Calculando cobertura…</div>
+        <div v-else-if="stats">
+          <!-- KPIs -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="card p-5 text-center">
+              <div class="text-3xl font-bold text-gray-900">{{ stats.salas_activas }}</div>
+              <div class="text-sm text-gray-500 mt-1 font-medium">Salas Activas</div>
+              <div class="text-xs text-gray-400 mt-0.5">de {{ stats.total_salas }} totales</div>
+            </div>
+            <div class="card p-5 text-center">
+              <div class="text-3xl font-bold text-gray-900">{{ stats.productos_activos }}</div>
+              <div class="text-sm text-gray-500 mt-1 font-medium">SKUs Activos</div>
+            </div>
+            <div class="card p-5 text-center">
+              <div class="text-3xl font-bold text-green-700">{{ stats.total_matriz }}</div>
+              <div class="text-sm text-gray-500 mt-1 font-medium">Asignaciones</div>
+            </div>
+            <div class="card p-5 text-center">
+              <div class="text-3xl font-bold text-green-700">{{ coberturaPctGlobal }}%</div>
+              <div class="text-sm text-gray-500 mt-1 font-medium">Cobertura Global</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Cobertura por sala -->
+            <div class="card p-5">
+              <h3 class="font-semibold text-gray-900 mb-3 text-sm">Cobertura por Sala</h3>
+              <input v-model="coberturaSearch" placeholder="Filtrar salas…" class="input-field mb-3" />
+              <div class="space-y-2.5 max-h-96 overflow-y-auto pr-1">
+                <div v-for="s in coberturaFiltrada" :key="s.sala_id" class="flex items-center gap-3">
+                  <div class="w-28 shrink-0 text-right">
+                    <span class="font-mono text-xs text-green-700 font-bold">{{ s.store_nbr }}</span>
+                    <span class="text-xs text-gray-400 ml-1">{{ s.nombre.substring(0,10) }}</span>
+                  </div>
+                  <div class="progress-track">
+                    <div class="progress-fill" :style="{width: s.cobertura_pct+'%'}"></div>
+                  </div>
+                  <div class="w-14 text-right shrink-0">
+                    <span :class="s.cobertura_pct===100 ? 'text-green-700' : s.cobertura_pct>=50 ? 'text-amber-600' : 'text-red-500'"
+                      class="text-xs font-semibold">{{ s.skus_en_matriz }}/{{ s.total_skus_activos }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Cobertura por producto -->
+            <div class="card p-5">
+              <h3 class="font-semibold text-gray-900 mb-3 text-sm">Cobertura por SKU</h3>
+              <div class="space-y-2.5">
+                <div v-for="p in (stats.cobertura_por_producto||[])" :key="p.producto_id" class="flex items-center gap-3">
+                  <div class="w-20 shrink-0 text-right">
+                    <span class="font-mono text-xs text-green-700 font-bold">{{ p.sku_cn }}</span>
+                  </div>
+                  <div class="progress-track">
+                    <div class="progress-fill" :style="{width: p.cobertura_pct+'%'}"></div>
+                  </div>
+                  <div class="w-14 text-right shrink-0">
+                    <span :class="p.cobertura_pct===100 ? 'text-green-700' : 'text-amber-600'"
+                      class="text-xs font-semibold">{{ p.salas_activas_con_producto }}/{{ p.total_salas_activas }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Mobile bottom nav -->
+    <div class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex z-30">
+      <button v-for="tab in tabs" :key="tab.id" @click="activeTab=tab.id"
+        :class="['mobile-nav-item', activeTab===tab.id ? 'active' : '']">
+        <span class="nav-icon">{{ tab.icon }}</span>
+        <span>{{ tab.label }}</span>
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL SALA -->
+<transition name="fade">
+<div v-if="salaModal.show" class="modal-overlay" @click.self="salaModal.show=false">
+  <div class="modal-content">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-lg font-bold text-gray-900">{{ salaModal.isNew ? 'Nueva Sala' : 'Editar Sala' }}</h2>
+      <button @click="salaModal.show=false" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
+    </div>
+    <div class="space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs text-gray-500 font-medium block mb-1">N° Sala *</label>
+          <input v-model.number="salaModal.form.store_nbr" type="number" class="input-field" />
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 font-medium block mb-1">Tipo</label>
+          <select v-model="salaModal.form.tipo" class="input-field">
+            <option value="">Sin definir</option>
+            <option value="hiperlider">Hiper Lider</option>
+            <option value="lider">Lider</option>
+            <option value="express">Express</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 font-medium block mb-1">Nombre *</label>
+        <input v-model="salaModal.form.nombre" class="input-field" />
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs text-gray-500 font-medium block mb-1">Zona</label>
+          <select v-model="salaModal.form.zona" class="input-field">
+            <option value="">Sin definir</option>
+            <option value="Norte">Norte</option>
+            <option value="RM">RM</option>
+            <option value="Sur">Sur</option>
+            <option value="Outlet">Outlet</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 font-medium block mb-1">Región oficial</label>
+          <select v-model="salaModal.form.region" class="input-field">
+            <option value="">Sin definir</option>
+            <option v-for="r in regionesChile" :key="r" :value="r">{{ r }}</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs text-gray-500 font-medium block mb-1">Comuna</label>
+          <input v-model="salaModal.form.comuna" class="input-field" />
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 font-medium block mb-1">Activa</label>
+          <select v-model="salaModal.form.activa" class="input-field">
+            <option :value="true">Sí</option>
+            <option :value="false">No</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 font-medium block mb-1">Dirección</label>
+        <input v-model="salaModal.form.direccion" class="input-field" />
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 font-medium block mb-1">Notas</label>
+        <textarea v-model="salaModal.form.notas" rows="2" class="input-field" style="resize:none;"></textarea>
+      </div>
+      <p v-if="salaModal.error" class="text-red-500 text-sm">{{ salaModal.error }}</p>
+      <div class="flex justify-end gap-3 pt-2">
+        <button @click="salaModal.show=false" class="btn-secondary">Cancelar</button>
+        <button @click="saveSala" :disabled="salaModal.saving" class="btn-primary">
+          {{ salaModal.saving ? 'Guardando…' : 'Guardar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+</transition>
+
+<!-- MODAL PRODUCTO -->
+<transition name="fade">
+<div v-if="prodModal.show" class="modal-overlay" @click.self="prodModal.show=false">
+  <div class="modal-content">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-lg font-bold text-gray-900">{{ prodModal.isNew ? 'Nuevo Producto' : 'Editar Producto' }}</h2>
+      <button @click="prodModal.show=false" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
+    </div>
+    <div class="space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs text-gray-500 font-medium block mb-1">Prime Item # *</label>
+          <input v-model.number="prodModal.form.prime_item_nbr" type="number" class="input-field" />
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 font-medium block mb-1">SKU CN</label>
+          <input v-model="prodModal.form.sku_cn" class="input-field" />
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 font-medium block mb-1">Descripción *</label>
+        <input v-model="prodModal.form.descripcion" class="input-field" />
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs text-gray-500 font-medium block mb-1">Categoría</label>
+          <input v-model="prodModal.form.categoria" class="input-field" />
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 font-medium block mb-1">Subgrupo</label>
+          <input v-model="prodModal.form.subgrupo" class="input-field" />
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        <div>
+          <label class="text-xs text-gray-500 font-medium block mb-1">VNPK</label>
+          <input v-model.number="prodModal.form.vnpk_qty" type="number" class="input-field" />
+        </div>
+        <div class="col-span-2">
+          <label class="text-xs text-gray-500 font-medium block mb-1">UPC</label>
+          <input v-model="prodModal.form.upc" class="input-field" />
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 font-medium block mb-1">Estado</label>
+        <select v-model="prodModal.form.activo" class="input-field">
+          <option :value="true">Activo</option>
+          <option :value="false">Inactivo</option>
+        </select>
+      </div>
+      <p v-if="prodModal.error" class="text-red-500 text-sm">{{ prodModal.error }}</p>
+      <div class="flex justify-end gap-3 pt-2">
+        <button @click="prodModal.show=false" class="btn-secondary">Cancelar</button>
+        <button @click="saveProducto" :disabled="prodModal.saving" class="btn-primary">
+          {{ prodModal.saving ? 'Guardando…' : 'Guardar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+</transition>
+
+<!-- TOAST -->
+<transition name="fade">
+<div v-if="toast.show" :class="['toast', toast.type==='ok' ? 'toast-ok' : 'toast-err']">
+  {{ toast.msg }}
+</div>
+</transition>
+
+<!-- VERSION CHIP -->
+<div v-if="authenticated" class="version-chip">v{{ appVersion }}</div>
+
+</div><!-- #app -->
+
+<script>
+const SUPABASE_URL = 'https://ezkrikgvdevkjnjqsqis.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV6a3Jpa2d2ZGV2a2puanFzcWlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NzQ0NTEsImV4cCI6MjA4OTI1MDQ1MX0.K71qLHuU-Thu9yvnd7eOLt0hcwAhOvAXrVZFE2r_aPk';
+const CN_APP_SLUG = 'productos-salas';
+const CN_SESSION_KEY = 'cn_session_productos-salas';
+const CN_PANEL_URL = 'https://wild-apps.netlify.app';
+const PAGE_SIZE = 50;
+
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+Vue.createApp({
+  data() {
+    return {
+      appVersion: '1.5',
+      authenticated: false,
+      currentUser: null,
+      token: null,
+
+      loginForm: { username: '', password: '' },
+      loginLoading: false,
+      loginError: '',
+
+      activeTab: 'salas',
+      tabs: [
+        { id: 'salas',     icon: '🏪', label: 'Salas' },
+        { id: 'productos', icon: '📦', label: 'Productos' },
+        { id: 'matriz',    icon: '🔢', label: 'Matriz' },
+        { id: 'ranking',   icon: '📊', label: 'Ranking' },
+        { id: 'cobertura', icon: '📈', label: 'Cobertura' },
+      ],
+
+      // SALAS
+      salas: [],
+      salasFilter: { search: '', tipo: '', zona: '', activa: '' },
+      salasSortKey: 'store_nbr',
+      salasSortDir: 'asc',
+      salasPage: 1,
+      salaModal: {
+        show: false, isNew: false, saving: false, error: '',
+        form: { id: null, store_nbr: '', nombre: '', tipo: '', zona: '', region: '', comuna: '', direccion: '', activa: true, notas: '' }
+      },
+
+      // PRODUCTOS
+      productos: [],
+      prodFilter: { search: '', categoria: '', activo: 'true' },
+      prodSortKey: 'prime_item_nbr',
+      prodSortDir: 'asc',
+      prodPage: 1,
+      prodModal: {
+        show: false, isNew: false, saving: false, error: '',
+        form: { id: null, prime_item_nbr: '', sku_cn: '', descripcion: '', marca: 'CASA NATIVA', vnpk_qty: '', categoria: '', subgrupo: '', upc: '', activo: true }
+      },
+
+      // MATRIZ
+      matriz: [],
+      matrizVista: 'sala',
+      matrizSalaSearch: '',
+      matrizSalaSeleccionada: null,
+      matrizProductosSeleccionados: [],
+      matrizProdSeleccionado: null,
+      matrizSaving: false,
+
+      // RANKING
+      ranking: [],
+      rankingFilter: { periodo: '', search: '' },
+      rankingSortKey: 'ranking_pos',
+      rankingSortDir: 'asc',
+      rankingPage: 1,
+      showImportRanking: false,
+      importRanking: {
+        periodo: '', fuente: '', rows: [], preview: [], cols: [], loading: false,
+        mapping: { ranking_pos: '', store_nbr: '', store_nbr_extract: true, sku_cn: '', descripcion_producto: '', ventas_unidades: '', ventas_monto: '', prime_item_nbr: '' }
+      },
+
+      // COBERTURA
+      stats: null,
+      statsLoading: false,
+      coberturaSearch: '',
+
+      // TOAST
+      toast: { show: false, msg: '', type: 'ok' },
+
+      regionesChile: [
+        'Arica y Parinacota','Tarapacá','Antofagasta','Atacama','Coquimbo',
+        'Valparaíso','Metropolitana','O\'Higgins','Maule','Ñuble',
+        'Biobío','La Araucanía','Los Ríos','Los Lagos','Aysén',
+        'Magallanes'
+      ],
+      zonasList: ['Norte','RM','Sur','Outlet'],
+    };
+  },
+
+  computed: {
+    // --- SALAS ---
+    salasFiltradas() {
+      return this.salas.filter(s => {
+        const q = this.salasFilter.search.toLowerCase();
+        const matchSearch = !q || s.nombre.toLowerCase().includes(q) || String(s.store_nbr).includes(q);
+        const matchTipo = !this.salasFilter.tipo || s.tipo === this.salasFilter.tipo;
+        const matchZona = !this.salasFilter.zona || s.zona === this.salasFilter.zona;
+        const matchActiva = this.salasFilter.activa === '' || String(s.activa) === this.salasFilter.activa;
+        return matchSearch && matchTipo && matchZona && matchActiva;
+      }).sort((a,b) => this.compareSort(a, b, this.salasSortKey, this.salasSortDir));
+    },
+    salasPageData() {
+      const start = (this.salasPage-1)*PAGE_SIZE;
+      return this.salasFiltradas.slice(start, start+PAGE_SIZE);
+    },
+    salasMaxPage() { return Math.max(1, Math.ceil(this.salasFiltradas.length/PAGE_SIZE)); },
+    salasActivas() { return this.salas.filter(s=>s.activa); },
+    salasActivasFiltradas() {
+      const q = this.matrizSalaSearch.toLowerCase();
+      return this.salasActivas.filter(s => !q || s.nombre.toLowerCase().includes(q) || String(s.store_nbr).includes(q))
+        .sort((a,b) => a.store_nbr-b.store_nbr);
+    },
+
+    // --- PRODUCTOS ---
+    productosFiltrados() {
+      return this.productos.filter(p => {
+        const q = this.prodFilter.search.toLowerCase();
+        const matchSearch = !q || p.descripcion.toLowerCase().includes(q) || (p.sku_cn||'').toLowerCase().includes(q) || (p.upc||'').includes(q) || String(p.prime_item_nbr).includes(q);
+        const matchCat = !this.prodFilter.categoria || p.categoria === this.prodFilter.categoria;
+        const matchActivo = this.prodFilter.activo === '' || String(p.activo) === this.prodFilter.activo;
+        return matchSearch && matchCat && matchActivo;
+      }).sort((a,b) => this.compareSort(a, b, this.prodSortKey, this.prodSortDir));
+    },
+    productosPageData() {
+      const start = (this.prodPage-1)*PAGE_SIZE;
+      return this.productosFiltrados.slice(start, start+PAGE_SIZE);
+    },
+    prodMaxPage() { return Math.max(1, Math.ceil(this.productosFiltrados.length/PAGE_SIZE)); },
+    categoriasUnicas() {
+      return [...new Set(this.productos.map(p=>p.categoria).filter(Boolean))].sort();
+    },
+
+    // --- RANKING ---
+    rankingFiltrado() {
+      return this.ranking.filter(r => {
+        const matchPer = !this.rankingFilter.periodo || r.periodo === this.rankingFilter.periodo;
+        const q = this.rankingFilter.search.toLowerCase();
+        const matchSearch = !q || String(r.store_nbr||'').includes(q) || (r.sku_cn||'').toLowerCase().includes(q) || (r.descripcion_producto||'').toLowerCase().includes(q);
+        return matchPer && matchSearch;
+      }).sort((a,b) => this.compareSort(a, b, this.rankingSortKey, this.rankingSortDir));
+    },
+    rankingPageData() {
+      const start = (this.rankingPage-1)*PAGE_SIZE;
+      return this.rankingFiltrado.slice(start, start+PAGE_SIZE);
+    },
+    rankingMaxPage() { return Math.max(1, Math.ceil(this.rankingFiltrado.length/PAGE_SIZE)); },
+    periodosUnicos() {
+      return [...new Set(this.ranking.map(r=>r.periodo).filter(Boolean))].sort().reverse();
+    },
+
+    // --- COBERTURA ---
+    coberturaFiltrada() {
+      const q = this.coberturaSearch.toLowerCase();
+      return (this.stats?.cobertura_por_sala||[]).filter(s => !q || s.nombre.toLowerCase().includes(q) || String(s.store_nbr).includes(q))
+        .sort((a,b) => b.cobertura_pct - a.cobertura_pct);
+    },
+    coberturaPctGlobal() {
+      if (!this.stats || !this.stats.salas_activas || !this.stats.productos_activos) return 0;
+      const maxPosible = this.stats.salas_activas * this.stats.productos_activos;
+      if (!maxPosible) return 0;
+      return Math.round(this.stats.total_matriz * 100 / maxPosible);
+    },
+  },
+
+  methods: {
+    // AUTH
+    async doLogin() {
+      if (!this.loginForm.username || !this.loginForm.password) { this.loginError = 'Completa usuario y contraseña'; return; }
+      this.loginLoading = true; this.loginError = '';
+      try {
+        const { data, error } = await db.rpc('cn_authenticate', { p_username: this.loginForm.username, p_password: this.loginForm.password });
+        if (error) throw error;
+        if (!data || !data.success) { this.loginError = data?.error || 'Credenciales incorrectas'; return; }
+        this.token = data.token;
+        this.currentUser = data.user;
+        localStorage.setItem(CN_SESSION_KEY, JSON.stringify({ token: data.token, user: data.user }));
+        this.authenticated = true;
+        await this.loadAll();
+      } catch(e) { this.loginError = e.message || 'Error al ingresar'; }
+      finally { this.loginLoading = false; }
+    },
+    async doLogout() {
+      if (this.token) await db.rpc('cn_logout', { p_token: this.token }).catch(()=>{});
+      localStorage.removeItem(CN_SESSION_KEY);
+      this.authenticated = false; this.token = null; this.currentUser = null;
+    },
+    async restoreSession() {
+      const raw = localStorage.getItem(CN_SESSION_KEY);
+      if (!raw) return;
+      try {
+        const { token, user } = JSON.parse(raw);
+        const { data } = await db.rpc('cn_validate_token', { p_token: token });
+        if (data?.success) {
+          this.token = token; this.currentUser = data.user || user; this.authenticated = true;
+          await this.loadAll();
+        } else { localStorage.removeItem(CN_SESSION_KEY); }
+      } catch(e) { localStorage.removeItem(CN_SESSION_KEY); }
+    },
+
+    // LOAD ALL
+    async loadAll() {
+      await Promise.all([this.loadSalas(), this.loadProductos(), this.loadMatriz(), this.loadRanking()]);
+      if (this.activeTab === 'cobertura') this.loadStats();
+    },
+    async loadSalas() {
+      const { data } = await db.rpc('cn_ps_salas_list', { p_token: this.token });
+      this.salas = data || [];
+    },
+    async loadProductos() {
+      const { data } = await db.rpc('cn_ps_productos_list', { p_token: this.token });
+      this.productos = data || [];
+    },
+    async loadMatriz() {
+      const { data } = await db.rpc('cn_ps_matriz_list', { p_token: this.token });
+      this.matriz = data || [];
+    },
+    async loadRanking() {
+      const { data } = await db.rpc('cn_ps_ranking_list', { p_token: this.token });
+      this.ranking = data || [];
+    },
+    async loadStats() {
+      this.statsLoading = true;
+      const { data } = await db.rpc('cn_ps_stats', { p_token: this.token });
+      this.stats = data;
+      this.statsLoading = false;
+    },
+
+    // SALAS CRUD
+    openSalaForm(sala) {
+      this.salaModal.isNew = !sala;
+      this.salaModal.error = '';
+      this.salaModal.form = sala ? { ...sala } : { id: null, store_nbr: '', nombre: '', tipo: '', zona: '', region: '', comuna: '', direccion: '', activa: true, notas: '' };
+      this.salaModal.show = true;
+    },
+    async saveSala() {
+      if (!this.salaModal.form.store_nbr || !this.salaModal.form.nombre) { this.salaModal.error = 'N° y nombre son obligatorios'; return; }
+      this.salaModal.saving = true; this.salaModal.error = '';
+      try {
+        const payload = { ...this.salaModal.form };
+        if (!payload.id) delete payload.id;
+        const { data, error } = await db.rpc('cn_ps_sala_upsert', { p_token: this.token, p_data: payload });
+        if (error) throw error;
+        await this.loadSalas();
+        this.salaModal.show = false;
+        this.showToast('Sala guardada correctamente');
+      } catch(e) { this.salaModal.error = e.message; }
+      finally { this.salaModal.saving = false; }
+    },
+    async toggleSala(sala) {
+      const { error } = await db.rpc('cn_ps_sala_toggle', { p_token: this.token, p_id: sala.id, p_activa: !sala.activa });
+      if (error) { this.showToast(error.message, 'err'); return; }
+      await this.loadSalas();
+      this.showToast(sala.activa ? 'Sala desactivada' : 'Sala activada');
+    },
+
+    // PRODUCTOS CRUD
+    openProductoForm(prod) {
+      this.prodModal.isNew = !prod;
+      this.prodModal.error = '';
+      this.prodModal.form = prod ? { ...prod } : { id: null, prime_item_nbr: '', sku_cn: '', descripcion: '', marca: 'CASA NATIVA', vnpk_qty: '', categoria: '', subgrupo: '', upc: '', activo: true };
+      this.prodModal.show = true;
+    },
+    async saveProducto() {
+      if (!this.prodModal.form.prime_item_nbr || !this.prodModal.form.descripcion) { this.prodModal.error = 'Item # y descripción son obligatorios'; return; }
+      this.prodModal.saving = true; this.prodModal.error = '';
+      try {
+        const payload = { ...this.prodModal.form };
+        if (!payload.id) delete payload.id;
+        const { data, error } = await db.rpc('cn_ps_producto_upsert', { p_token: this.token, p_data: payload });
+        if (error) throw error;
+        await this.loadProductos();
+        this.prodModal.show = false;
+        this.showToast('Producto guardado correctamente');
+      } catch(e) { this.prodModal.error = e.message; }
+      finally { this.prodModal.saving = false; }
+    },
+
+    // MATRIZ
+    getProductosBySala(salaId) {
+      return this.matriz.filter(m => m.sala_id === salaId && m.activa).map(m => m.producto_id);
+    },
+    isEnMatriz(salaId, prodId) {
+      return this.matriz.some(m => m.sala_id === salaId && m.producto_id === prodId && m.activa);
+    },
+    salaSkuCount(salaId) {
+      return this.matriz.filter(m => m.sala_id === salaId && m.activa).length;
+    },
+    productoSalaCount(prodId) {
+      return this.matriz.filter(m => m.producto_id === prodId && m.activa && this.salasActivas.some(s => s.id === m.sala_id)).length;
+    },
+    async guardarMatrizSala() {
+      if (!this.matrizSalaSeleccionada) return;
+      this.matrizSaving = true;
+      try {
+        const { error } = await db.rpc('cn_ps_matriz_set_sala', {
+          p_token: this.token,
+          p_sala_id: this.matrizSalaSeleccionada.id,
+          p_producto_ids: this.matrizProductosSeleccionados
+        });
+        if (error) throw error;
+        await this.loadMatriz();
+        this.showToast('Matriz guardada');
+      } catch(e) { this.showToast(e.message, 'err'); }
+      finally { this.matrizSaving = false; }
+    },
+
+    // RANKING
+    buildMappedRows() {
+      const m = this.importRanking.mapping;
+      const mappedCols = Object.entries(m)
+        .filter(([k, v]) => k !== 'store_nbr_extract' && v)
+        .map(([, v]) => v);
+      return this.importRanking.rows.map(row => {
+        const out = {};
+        if (m.ranking_pos && row[m.ranking_pos] !== '') out.ranking_pos = Number(row[m.ranking_pos]) || null;
+        if (m.store_nbr && row[m.store_nbr] !== '') {
+          const raw = String(row[m.store_nbr]);
+          out.store_nbr = m.store_nbr_extract
+            ? (parseInt(raw.match(/\d+/)?.[0] || '', 10) || null)
+            : (Number(raw) || null);
+        }
+        if (m.sku_cn && row[m.sku_cn] !== '') out.sku_cn = String(row[m.sku_cn]);
+        if (m.descripcion_producto && row[m.descripcion_producto] !== '') out.descripcion_producto = String(row[m.descripcion_producto]);
+        if (m.ventas_unidades && row[m.ventas_unidades] !== '') out.ventas_unidades = Number(row[m.ventas_unidades]) || null;
+        if (m.ventas_monto && row[m.ventas_monto] !== '') out.ventas_monto = Number(row[m.ventas_monto]) || null;
+        if (m.prime_item_nbr && row[m.prime_item_nbr] !== '') out.prime_item_nbr = Number(row[m.prime_item_nbr]) || null;
+        // Keep unmapped columns as extra (RPC stores them in extra jsonb)
+        Object.keys(row).forEach(k => { if (!mappedCols.includes(k)) out[k] = row[k]; });
+        return out;
+      });
+    },
+    async doImportRanking() {
+      if (!this.importRanking.periodo || !this.importRanking.fuente || !this.importRanking.rows.length) {
+        this.showToast('Completa período, fuente y selecciona archivo', 'err'); return;
+      }
+      this.importRanking.loading = true;
+      try {
+        const mappedRows = this.buildMappedRows();
+        const { data, error } = await db.rpc('cn_ps_ranking_import', {
+          p_token: this.token,
+          p_periodo: this.importRanking.periodo,
+          p_fuente: this.importRanking.fuente,
+          p_rows: mappedRows
+        });
+        if (error) throw error;
+        await this.loadRanking();
+        this.showImportRanking = false;
+        this.importRanking = { periodo: '', fuente: '', rows: [], preview: [], cols: [], loading: false, mapping: { ranking_pos: '', store_nbr: '', store_nbr_extract: true, sku_cn: '', descripcion_producto: '', ventas_unidades: '', ventas_monto: '', prime_item_nbr: '' } };
+        this.showToast('Ranking importado: ' + (data?.inserted||0) + ' registros');
+      } catch(e) { this.showToast(e.message, 'err'); }
+      finally { this.importRanking.loading = false; }
+    },
+    autoDetectMapping(cols) {
+      const m = { ranking_pos: '', store_nbr: '', store_nbr_extract: true, sku_cn: '', descripcion_producto: '', ventas_unidades: '', ventas_monto: '', prime_item_nbr: '' };
+      for (const col of cols) {
+        const l = col.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        if (!m.ranking_pos && (col === 'N' || l === 'pos' || l === 'posicion' || l.includes('rank'))) m.ranking_pos = col;
+        if (!m.store_nbr && (l.includes('sala') || l.includes('store') || l.includes('local') || l.includes('direcci') || l.includes('tienda') || l.includes('sucursal'))) { m.store_nbr = col; m.store_nbr_extract = true; }
+        if (!m.sku_cn && (l.includes('sku') || l === 'item')) m.sku_cn = col;
+        if (!m.descripcion_producto && (l.includes('descri') || l.includes('product') || l.includes('nombre'))) m.descripcion_producto = col;
+        if (!m.ventas_unidades && (l.includes('unidad') || l.includes('qty') || l.includes('cantidad') || l === 'units')) m.ventas_unidades = col;
+        if (!m.ventas_monto && (l.includes('monto') || l.includes('venta') || l === 'sales' || l.includes('importe'))) m.ventas_monto = col;
+        if (!m.prime_item_nbr && (l.includes('prime') || l === 'item_nbr')) m.prime_item_nbr = col;
+      }
+      return m;
+    },
+    onRankingFileSelected(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const wb = XLSX.read(ev.target.result, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        if (!rows.length) { this.showToast('El archivo está vacío', 'err'); return; }
+        this.importRanking.cols = Object.keys(rows[0]);
+        this.importRanking.preview = rows.slice(0, 5);
+        this.importRanking.rows = rows;
+        this.importRanking.mapping = this.autoDetectMapping(this.importRanking.cols);
+      };
+      reader.readAsBinaryString(file);
+    },
+
+    // SORTING
+    sortSalas(key) {
+      if (this.salasSortKey === key) this.salasSortDir = this.salasSortDir === 'asc' ? 'desc' : 'asc';
+      else { this.salasSortKey = key; this.salasSortDir = 'asc'; }
+      this.salasPage = 1;
+    },
+    sortProd(key) {
+      if (this.prodSortKey === key) this.prodSortDir = this.prodSortDir === 'asc' ? 'desc' : 'asc';
+      else { this.prodSortKey = key; this.prodSortDir = 'asc'; }
+      this.prodPage = 1;
+    },
+    sortRanking(key) {
+      if (this.rankingSortKey === key) this.rankingSortDir = this.rankingSortDir === 'asc' ? 'desc' : 'asc';
+      else { this.rankingSortKey = key; this.rankingSortDir = 'asc'; }
+      this.rankingPage = 1;
+    },
+    sortIcon(table, key) {
+      const k = table==='salas' ? this.salasSortKey : table==='prod' ? this.prodSortKey : this.rankingSortKey;
+      const d = table==='salas' ? this.salasSortDir : table==='prod' ? this.prodSortDir : this.rankingSortDir;
+      if (k !== key) return '↕';
+      return d === 'asc' ? '↑' : '↓';
+    },
+    compareSort(a, b, key, dir) {
+      let va, vb;
+      if (key === 'peso') {
+        va = this.extractPeso(a.extra) ?? -1;
+        vb = this.extractPeso(b.extra) ?? -1;
+      } else {
+        va = a[key] ?? '';
+        vb = b[key] ?? '';
+      }
+      const cmp = typeof va === 'number' ? va - vb : String(va).localeCompare(String(vb), 'es');
+      return dir === 'asc' ? cmp : -cmp;
+    },
+
+    // EXPORTS
+    exportSalasExcel() {
+      const rows = this.salasFiltradas.map(s => ({
+        'N°': s.store_nbr, 'Nombre': s.nombre, 'Tipo': s.tipo||'',
+        'Zona': s.zona||'', 'Región': s.region||'', 'Comuna': s.comuna||'',
+        'Dirección': s.direccion||'', 'Activa': s.activa ? 'Sí' : 'No',
+        'SKUs en Matriz': this.salaSkuCount(s.id), 'Notas': s.notas||''
+      }));
+      this.downloadExcel(rows, 'salas_walmart');
+    },
+    exportMatrizExcel() {
+      const rows = this.salas.flatMap(s =>
+        this.productos.filter(p => this.isEnMatriz(s.id, p.id)).map(p => ({
+          'N° Sala': s.store_nbr, 'Nombre Sala': s.nombre, 'Zona': s.zona||'',
+          'Prime Item #': p.prime_item_nbr, 'SKU CN': p.sku_cn||'', 'Descripción': p.descripcion,
+          'Categoría': p.categoria||''
+        }))
+      );
+      this.downloadExcel(rows, 'matriz_productos_salas');
+    },
+    exportRankingExcel() {
+      const rows = this.rankingFiltrado.map(r => {
+        const sala = this.salaByNbr(r.store_nbr);
+        const peso = this.extractPeso(r.extra);
+        return {
+          'Pos': r.ranking_pos || '',
+          'N° Sala': r.store_nbr || '',
+          'Nombre Sala': sala?.nombre || '',
+          'Tipo': sala ? this.tipoLabel(sala.tipo) : '',
+          'Zona': sala?.zona || '',
+          'Región': sala?.region || '',
+          'Comuna': sala?.comuna || '',
+          'Dirección': sala?.direccion || '',
+          '% Peso': peso != null ? (peso * 100).toFixed(2) + '%' : '',
+          'SKU CN': r.sku_cn || '',
+          'Prime Item #': r.prime_item_nbr || '',
+          'Descripción': r.descripcion_producto || '',
+          'Ventas Unidades': r.ventas_unidades || '',
+          'Ventas Monto': r.ventas_monto || '',
+          'Período': r.periodo || '',
+          'Fuente': r.fuente || '',
+        };
+      });
+      this.downloadExcel(rows, 'ranking_ventas');
+    },
+    downloadExcel(rows, name) {
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Data');
+      XLSX.writeFile(wb, `${name}_${new Date().toISOString().slice(0,10)}.xlsx`);
+    },
+
+    // HELPERS
+    tipoLabel(tipo) {
+      return tipo === 'hiperlider' ? 'Hiper Lider' : tipo === 'lider' ? 'Lider' : tipo === 'express' ? 'Express' : tipo;
+    },
+    salaNameByNbr(nbr) {
+      const s = this.salas.find(s => s.store_nbr === nbr);
+      return s ? s.nombre : '';
+    },
+    salaByNbr(nbr) {
+      return this.salas.find(s => s.store_nbr === nbr) || null;
+    },
+    extractPeso(extra) {
+      if (!extra) return null;
+      const key = Object.keys(extra).find(k => k.includes('%') || k.toLowerCase().includes('peso'));
+      if (!key) return null;
+      const val = parseFloat(extra[key]);
+      return isNaN(val) ? null : val;
+    },
+    fmtPeso(extra) {
+      const val = this.extractPeso(extra);
+      return val != null ? (val * 100).toFixed(1) + '%' : '—';
+    },
+    fmtPreviewCell(col, val) {
+      if (col.includes('%') && val !== '' && !isNaN(val)) {
+        return (Number(val) * 100).toFixed(1) + '%';
+      }
+      return val;
+    },
+    fmtNum(n) { return n != null ? Number(n).toLocaleString('es-CL') : '—'; },
+    fmtMonto(n) { return n != null ? '$' + Number(n).toLocaleString('es-CL') : '—'; },
+    showToast(msg, type='ok') {
+      this.toast = { show: true, msg, type };
+      setTimeout(() => { this.toast.show = false; }, 3000);
+    },
+  },
+
+  watch: {
+    activeTab(v) {
+      if (v === 'cobertura' && !this.stats) this.loadStats();
+    },
+    salasFiltradas() { this.salasPage = 1; },
+    productosFiltrados() { this.prodPage = 1; },
+  },
+
+  async mounted() {
+    await this.restoreSession();
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
